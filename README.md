@@ -51,7 +51,7 @@ The Warehouse SLIM Optimization project aims to determine the most suitable conf
 ## Simulating the Environment
 
 - **Visualization**
-  - The project uses a Python package such as [PyVista](https://www.pyvista.org/) to render 3D numpy matrices.
+  - The current idea is to use Python package such as [PyVista](https://www.pyvista.org/) to render 3D numpy matrices.
   
 - **3D Representation**
   - The 3D coordinates and dimensions of entities are used to generate cuboids.
@@ -68,10 +68,10 @@ The Warehouse SLIM Optimization project aims to determine the most suitable conf
 
 ## Key Objectives
 
-- Build Python classes for the warehouse hierarchy (Zones, Aisles, Racks, Items) with essential metadata.  
-- Organize the warehouse as Zones → Aisles → Racks, with only Racks storing items.  
-- Develop a randomized function to validate and assign items to available racks.  
-- Apply local search techniques and cost functions to optimize space utilization and retrieval times.  
-- Use a 3D visualization library (e.g., PyVista) to render entities and animate changes in real time.  
-- Measure performance based on space utilization, efficiency, and layout effectiveness.  
-- Ensure scalability and adaptability to handle growing warehouses and new constraints.  
+- Build Python classes for the warehouse hierarchy (Zones, Aisles, Racks, Items) with essential metadata.
+- Organize the warehouse as Zones → Aisles → Racks, with only Racks storing items.
+- Develop a randomized function to validate and assign items to available racks.
+- Apply local search techniques and cost functions to optimize SLIM.
+- Use a 3D visualization library (e.g., PyVista) to render entities and animate changes in real time.
+- Measure performance based on space utilization, retrival efficiency, and layout effectiveness. One Advantage with PyVista is it's interactive. So a high level visual evaluation can be performed.
+- Ensure scalability and adaptability to handle growing warehouses and new constraints.
