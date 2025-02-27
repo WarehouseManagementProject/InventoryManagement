@@ -1,4 +1,4 @@
-# Warehouse SLIM Optimization Project
+# Warehouse SLIM Optimization
 
 ## Summary of the Project Idea
 
