@@ -83,8 +83,8 @@ The Warehouse SLIM Optimization project aims to determine the most suitable conf
 
 
 ## Algorithms & Models (In-Progress)
-- Genetic Algorithms (GA) with Multi-Parent Crossover Operators
-- Iterated Local Search & Simulated Annealing
+- Genetic Algorithm
+- Local Search (Simulated Annealing)
 - _If time permits, we plan on exploring Reinforcement Learning_
 
 ## Timeline & Roadmap (March 1st - April 5th)
