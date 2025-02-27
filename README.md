@@ -75,3 +75,22 @@ The Warehouse SLIM Optimization project aims to determine the most suitable conf
 - Use a 3D visualization library (e.g., PyVista) to render entities and animate changes in real time.
 - Measure performance based on space utilization, retrival efficiency, and layout effectiveness. One Advantage with PyVista is it's interactive. So a high level visual evaluation can be performed.
 - Ensure scalability and adaptability to handle growing warehouses and new constraints.
+
+
+## Algorithms & Models (In-Progress)
+- Genetic Algorithms (GA) with Multi-Parent Crossover Operators
+- Iterated Local Search & Simulated Annealing
+- _If time permits, we plan on exploring Reinforcement Learning_
+
+## Timeline & Roadmap
+
+## Timeline & Roadmap (March 1st - April 5th)
+
+| **Dates** | **Tasks** |
+|-----------|-----------|
+| **March 1 - 7** | Finalize project requirements and objectives. <br> Define data structure and metadata for warehouse hierarchy. <br> Research and finalize algorithms (GA, Local Search, Simulated Annealing). |
+| **March 8 - 14** | Implement Python classes for the warehouse hierarchy. <br> Develop random placement algorithm for item storage validation. <br> Set up basic simulation environment using PyVista or equivalent. |
+| **March 15 - 21** | Code Genetic Algorithm with multi-parent crossover. <br> Implement Iterated Local Search and Simulated Annealing. <br> Integrate cost/score functions for evaluating configurations. |
+| **March 22 - 28** | Test algorithms on small-scale warehouse simulations. <br> Debug and refine optimization logic for accuracy and performance. <br> Validate random placement and storage constraints. |
+| **March 29 - April 4** | Run full-scale simulations with varying configurations. <br> Analyze results to identify the best-performing layouts. <br> Fine-tune algorithms based on simulation feedback. |
+| **April 5** | Prepare a summary of findings and performance metrics. <br> Document the project workflow, results, and potential improvements. |
