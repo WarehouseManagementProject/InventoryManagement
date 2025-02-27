@@ -35,6 +35,11 @@ The Warehouse SLIM Optimization project aims to determine the most suitable conf
   - Dimensions (height, width, depth)
   - Descriptions
 
+### Diagramatic Representation:
+![wso-mermaid-diagram](https://github.com/user-attachments/assets/66bf6290-a17a-49bf-afe2-f589a143c0f6)
+
+
+
 ## Optimization
 
 - **Virtual Entities**
