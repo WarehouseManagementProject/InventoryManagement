@@ -36,8 +36,7 @@ The Warehouse SLIM Optimization project aims to determine the most suitable conf
   - Descriptions
 
 ### Diagramatic Representation:
-![wso-mermaid-diagram](https://github.com/user-attachments/assets/66bf6290-a17a-49bf-afe2-f589a143c0f6)
-
+![wso-mermaid-diagram](https://github.com/user-attachments/assets/b48a37c8-047e-457b-b3eb-adce784fcdf4)
 
 
 ## Optimization
