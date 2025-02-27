@@ -70,6 +70,10 @@ The Warehouse SLIM Optimization project aims to determine the most suitable conf
   - The color is determined based on the entity type and the item sub-category.
 
 
+https://github.com/user-attachments/assets/f62a0fc5-f6c6-4ee6-b65d-a6c463db1cf7
+
+
+
 ## Key Objectives
 
 - Build Python classes for the warehouse hierarchy (Zones, Aisles, Racks, Items) with essential metadata.
@@ -85,6 +89,7 @@ The Warehouse SLIM Optimization project aims to determine the most suitable conf
 - Genetic Algorithm
 - Local Search (Simulated Annealing)
 - * _If time permits, we plan on exploring Reinforcement Learning_
+
 
 ## Timeline & Roadmap (March 1st - April 5th)
 
