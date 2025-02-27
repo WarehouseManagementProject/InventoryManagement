@@ -89,8 +89,7 @@ The Warehouse SLIM Optimization project aims to determine the most suitable conf
 | **March 1 - 3**    | Finalize requirements, objectives, and algorithms (GA, Local Search).    |
 | **March 4 - 7**    | Define data structure and implement Python classes for hierarchy.        |
 | **March 8 - 12**   | Develop random placement algorithm and set up simulation environment.    |
-| **March 13 - 18**  | Implement Genetic Algorithm and Iterated Local Search.                   |
-| **March 19 - 22**  | Integrate cost functions and implement Simulated Annealing.              |
-| **March 23 - 27**  | Test algorithms on small-scale simulations and debug issues.             |
+| **March 13 - 22**  | Implement Genetic Algorithm / Iterated Local Search & Simulated Annealing.|
+| **March 23 - 27**  | Test algorithms.             |
 | **March 28 - April 2** | Run full-scale simulations, analyze results, and fine-tune algorithms. |
 | **April 3 - April 5** | Prepare final report, document findings, and outline improvements.     |
