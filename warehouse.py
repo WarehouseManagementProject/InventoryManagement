@@ -139,8 +139,6 @@ class Warehouse:
                                 item = rack.storage[i, j, k]
                                 if item and item.id not in visualized_items:
                                     visualized_items.add(item.id)
-                                    
-                                    # Get color from item_directory based on category and sub_category
                                     item_color = item_directory[item.category][item.sub_category]
                                     
                                     item_dx, item_dy, item_dz = item.dimensions
