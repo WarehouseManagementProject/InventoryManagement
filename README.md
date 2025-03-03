@@ -36,9 +36,7 @@ The Warehouse SLIM Optimization project aims to determine the most suitable conf
   - Descriptions
 
 ### Diagramatic Representation:
-https://github.com/user-attachments/assets/ef06923f-d2b6-4dca-8ef7-7f8bf0fb8b66
-
-
+![wso-mermaid-diagram](https://github.com/user-attachments/assets/b48a37c8-047e-457b-b3eb-adce784fcdf4)
 
 
 ## Optimization
@@ -72,7 +70,7 @@ https://github.com/user-attachments/assets/ef06923f-d2b6-4dca-8ef7-7f8bf0fb8b66
   - The color is determined based on the entity type and the item sub-category.
 
 
-https://github.com/user-attachments/assets/f62a0fc5-f6c6-4ee6-b65d-a6c463db1cf7
+[Interacting with the Environment](https://github.com/user-attachments/assets/ef06923f-d2b6-4dca-8ef7-7f8bf0fb8b66)
 
 
 
