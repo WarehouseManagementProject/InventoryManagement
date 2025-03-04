@@ -104,7 +104,7 @@ class Warehouse:
     def add_zone(self, zone):
         self.zones.append(zone)
         
-    def find_space(self, item):
+    def add_item(self, item):
         random.shuffle(self.zones)
         for zone in self.zones:
             random.shuffle(zone.aisles)
@@ -194,6 +194,7 @@ def build_sample_warehouse(num_zones, num_aisles, num_racks, rack_dimensions, ra
         warehouse.add_zone(zone)
     return warehouse
 
+
 # This should be updated to make it more maintainable. Instead of using populate warehouse function, 
 # We should pass a list of items directly to the warehouse object and warehouse should take care of placing those.
 # So basically move this logic into warehouse class.
@@ -206,7 +207,7 @@ def populate_warehouse(warehouse, num_items):
         product_name = f"Item_{i}"
         retrieval_urgency = random.randint(1, 5)
         item = Item(category, sub_category, weight, dimensions, product_name, retrieval_urgency)
-        rack, position = warehouse.find_space(item)
+        rack, position = warehouse.add_item(item)
         if rack is None:
             print(f"No space found for {product_name}")
 
