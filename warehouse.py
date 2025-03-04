@@ -60,11 +60,14 @@ class Rack:
         if position[2] == 0:
             return True
         else:
-            for x in range(position[0], position[0] + item.dimensions[0]):
-                for y in range(position[1], position[1] + item.dimensions[1]):
-                    if self.storage[x, y, position[2] - 1] is None:
-                        return False
-            return True
+            bottom_center_x = position[0] + item.dimensions[0] / 2.0
+            bottom_center_y = position[1] + item.dimensions[1] / 2.0
+            cell_x = int(bottom_center_x)
+            cell_y = int(bottom_center_y)
+            if self.storage[cell_x, cell_y, position[2] - 1] is not None:
+                return True
+            else:
+                return False
 
     def get_supported_positions(self):
         supported_positions = []
@@ -190,7 +193,6 @@ def build_sample_warehouse(num_zones, num_aisles, num_racks, rack_dimensions, ra
             zone.add_aisle(aisle)
         warehouse.add_zone(zone)
     return warehouse
-
 
 # This should be updated to make it more maintainable. Instead of using populate warehouse function, 
 # We should pass a list of items directly to the warehouse object and warehouse should take care of placing those.
