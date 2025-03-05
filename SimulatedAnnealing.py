@@ -18,7 +18,7 @@ class SimulatedAnnealing:
     this is currently only a dummy objective function. Barely accounts for urgency and distance.
     I will need more clarity on properties of a warehouse item. Goal is to have everything in place so that
     the algorithm works irrespective of how bad it is.
-    
+    --
     '''
     
     def objective_function(self):
