@@ -33,12 +33,27 @@ class SimulatedAnnealing:
                                 if item:
                                     total_distance += item.retrieval_urgency * np.linalg.norm(rack.coordinates)
         return total_distance
+    
+    '''
+    Also temporary. Currently it generates a lot of mutations. Env could have a rollback option.
+    '''
     def generate_neighbor(self):
-        pass
+        new_warehouse = self.warehouse  # Copy the warehouse state
+        zone = random.choice(new_warehouse.zones)
+        aisle = random.choice(zone.aisles)
+        rack = random.choice(aisle.racks)
+        positions = rack.get_supported_positions()
+        if not positions:
+            return new_warehouse
+        pos1, pos2 = random.sample(positions, 2) if len(positions) > 1 else (positions[0], positions[0])
+        rack.storage[pos1], rack.storage[pos2] = rack.storage[pos2], rack.storage[pos1]
+        return new_warehouse
         
 
     def acceptance_probability(self, old_cost, new_cost):
-        pass
+        if new_cost < old_cost:
+            return 1.0
+        return math.exp((old_cost - new_cost) / self.temperature)
 
     def optimize(self, iterations=1000):
         pass
