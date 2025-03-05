@@ -50,6 +50,9 @@ class SimulatedAnnealing:
         return new_warehouse
         
 
+    '''
+    Almost ideal.
+    '''
     def acceptance_probability(self, old_cost, new_cost):
         if new_cost < old_cost:
             return 1.0
