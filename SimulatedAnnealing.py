@@ -13,8 +13,26 @@ class SimulatedAnnealing:
         self.best_state = None
         self.best_cost = float('inf')
 
+
+    '''
+    this is currently only a dummy objective function. Barely accounts for urgency and distance.
+    I will need more clarity on properties of a warehouse item. Goal is to have everything in place so that
+    the algorithm works irrespective of how bad it is.
+    
+    '''
+    
     def objective_function(self):
-        pass
+        total_distance = 0
+        for zone in self.warehouse.zones:
+            for aisle in zone.aisles:
+                for rack in aisle.racks:
+                    for i in range(rack.dimensions[0]):
+                        for j in range(rack.dimensions[1]):
+                            for k in range(rack.dimensions[2]):
+                                item = rack.storage[i, j, k]
+                                if item:
+                                    total_distance += item.retrieval_urgency * np.linalg.norm(rack.coordinates)
+        return total_distance
     def generate_neighbor(self):
         pass
         
