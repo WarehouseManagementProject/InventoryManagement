@@ -59,4 +59,37 @@ class SimulatedAnnealing:
         return math.exp((old_cost - new_cost) / self.temperature)
 
     def optimize(self, iterations=1000):
-        pass
+        current_cost = self.objective_function()
+        self.best_state = self.warehouse
+        self.best_cost = current_cost
+        
+        for _ in range(iterations):
+            if self.temperature < self.min_temp:
+                break
+            
+            new_warehouse = self.generate_neighbor()
+            new_cost = self.objective_function()
+            
+            if random.random() < self.acceptance_probability(current_cost, new_cost):
+                self.warehouse = new_warehouse
+                current_cost = new_cost
+                
+                if new_cost < self.best_cost:
+                    self.best_cost = new_cost
+                    self.best_state = new_warehouse
+            
+            self.temperature *= self.cooling_rate
+        
+        return self.best_state
+    
+
+warehouse = build_sample_warehouse(num_zones=2, num_aisles=3, num_racks=2,
+                                  rack_dimensions=(5, 4, 6), rack_spacing=(2, 2, 0.5))
+populate_warehouse(warehouse, 80)
+warehouse.visualize()
+# Run simulated annealing
+sa = SimulatedAnnealing(warehouse)
+optimized_warehouse = sa.optimize()
+
+# Visualize the optimized warehouse
+optimized_warehouse.visualize()

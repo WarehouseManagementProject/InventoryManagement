@@ -211,7 +211,7 @@ def populate_warehouse(warehouse, num_items):
         if rack is None:
             print(f"No space found for {product_name}")
 
-warehouse = build_sample_warehouse(num_zones=2, num_aisles=3, num_racks=2,
-                                  rack_dimensions=(5, 4, 6), rack_spacing=(2, 2, 0.5))
-populate_warehouse(warehouse, 30)
-warehouse.visualize()
+# warehouse = build_sample_warehouse(num_zones=2, num_aisles=3, num_racks=2,
+#                                   rack_dimensions=(5, 4, 6), rack_spacing=(2, 2, 0.5))
+# populate_warehouse(warehouse, 30)
+# warehouse.visualize()
