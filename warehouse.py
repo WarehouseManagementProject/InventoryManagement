@@ -60,11 +60,14 @@ class Rack:
         if position[2] == 0:
             return True
         else:
-            for x in range(position[0], position[0] + item.dimensions[0]):
-                for y in range(position[1], position[1] + item.dimensions[1]):
-                    if self.storage[x, y, position[2] - 1] is None:
-                        return False
-            return True
+            bottom_center_x = position[0] + item.dimensions[0] / 2.0
+            bottom_center_y = position[1] + item.dimensions[1] / 2.0
+            cell_x = int(bottom_center_x)
+            cell_y = int(bottom_center_y)
+            if self.storage[cell_x, cell_y, position[2] - 1] is not None:
+                return True
+            else:
+                return False
 
     def get_supported_positions(self):
         supported_positions = []
@@ -101,7 +104,7 @@ class Warehouse:
     def add_zone(self, zone):
         self.zones.append(zone)
         
-    def find_space(self, item):
+    def add_item(self, item):
         random.shuffle(self.zones)
         for zone in self.zones:
             random.shuffle(zone.aisles)
@@ -204,7 +207,7 @@ def populate_warehouse(warehouse, num_items):
         product_name = f"Item_{i}"
         retrieval_urgency = random.randint(1, 5)
         item = Item(category, sub_category, weight, dimensions, product_name, retrieval_urgency)
-        rack, position = warehouse.find_space(item)
+        rack, position = warehouse.add_item(item)
         if rack is None:
             print(f"No space found for {product_name}")
 
