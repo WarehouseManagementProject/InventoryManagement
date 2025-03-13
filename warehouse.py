@@ -1,6 +1,8 @@
 import numpy as np
 import pyvista as pv
 import random
+import time
+import platform
 
 item_directory = {
     "Electronics": {
@@ -50,24 +52,35 @@ class Rack:
                 return True
         return False
 
+    def remove_item(self, position):
+        if 0 <= position[0] < self.dimensions[0] and 0 <= position[1] < self.dimensions[1] and 0 <= position[2] < self.dimensions[2]:
+            item = self.storage[position]
+            if item is not None:
+                for x in range(position[0], min(position[0] + item.dimensions[0], self.dimensions[0])):
+                    for y in range(position[1], min(position[1] + item.dimensions[1], self.dimensions[1])):
+                        for z in range(position[2], min(position[2] + item.dimensions[2], self.dimensions[2])):
+                            self.storage[x, y, z] = None
+                return item
+        return None
     def can_place_item(self, item, position):
         for x in range(position[0], position[0] + item.dimensions[0]):
             for y in range(position[1], position[1] + item.dimensions[1]):
                 for z in range(position[2], position[2] + item.dimensions[2]):
-                    if (x >= self.dimensions[0] or y >= self.dimensions[1] or z >= self.dimensions[2] or
-                            self.storage[x, y, z] is not None):
+                    if not (0 <= x < self.dimensions[0] and 0 <= y < self.dimensions[1] and 0 <= z < self.dimensions[2]):
                         return False
+                    if self.storage[x, y, z] is not None:
+                        return False
+
         if position[2] == 0:
             return True
         else:
-            bottom_center_x = position[0] + item.dimensions[0] / 2.0
-            bottom_center_y = position[1] + item.dimensions[1] / 2.0
-            cell_x = int(bottom_center_x)
-            cell_y = int(bottom_center_y)
-            if self.storage[cell_x, cell_y, position[2] - 1] is not None:
-                return True
-            else:
-                return False
+             for x in range(position[0], position[0] + item.dimensions[0]):
+                for y in range(position[1], position[1] + item.dimensions[1]):
+                    if not (0 <= x < self.dimensions[0] and 0 <= y < self.dimensions[1]):
+                        continue
+                    if self.storage[x,y,position[2]-1] is None:
+                        return False
+             return True
 
     def get_supported_positions(self):
         supported_positions = []
@@ -98,12 +111,37 @@ class Zone:
         self.aisles.append(aisle)
 
 class Warehouse:
-    def __init__(self):
+    def __init__(self, show_vis=False):
         self.zones = []
+        self.placement_history = []
+        self.show_vis = show_vis
+        self.plotter = None
+        self.item_meshes = {}
+
 
     def add_zone(self, zone):
         self.zones.append(zone)
-        
+        if self.show_vis:
+            self._add_racks_to_visualization(zone)
+
+
+    def _add_racks_to_visualization(self, zone):
+        if self.plotter is None:
+            return
+
+        for aisle in zone.aisles:
+            for rack in aisle.racks:
+                x, y, z = rack.coordinates
+                dx, dy, dz = rack.dimensions
+
+                rack_mesh = pv.Cube(
+                    center=(x + dx/2, y + dy/2, z + dz/2),
+                    x_length=dx, y_length=dy, z_length=dz
+                )
+                self.plotter.add_mesh(rack_mesh, color="lightgray", opacity=0.3, show_edges=True)
+        self.plotter.render()
+
+
     def add_item(self, item):
         random.shuffle(self.zones)
         for zone in self.zones:
@@ -115,71 +153,129 @@ class Warehouse:
                     random.shuffle(supported_positions)
                     for position in supported_positions:
                         if rack.can_place_item(item, position):
-                            if rack.place_item(item,position):
+                            if rack.place_item(item, position):
+                                self.placement_history.append((item, rack, position))
+
+                                if self.show_vis:
+                                    self.add_item_to_visualization(item, rack, position)
+
                                 return rack, position
         return None, None
 
+    def undo_item(self):
+        if not self.placement_history:
+            print("No items to undo.")
+            return None
+
+        item, rack, position = self.placement_history.pop()
+        removed_item = rack.remove_item(position)
+
+        if self.show_vis and removed_item is not None:
+            self.remove_item_from_visualization(item.id)
+
+        return removed_item
+
+
+    def add_item_to_visualization(self, item, rack, position):
+        if self.plotter is None:
+            return
+
+        x, y, z = rack.coordinates
+        i, j, k = position
+        item_dx, item_dy, item_dz = item.dimensions
+        item_color = item_directory[item.category][item.sub_category]
+
+        item_mesh = pv.Cube(
+            center=(
+                x + i + item_dx / 2,
+                y + j + item_dy / 2,
+                z + k + item_dz / 2
+            ),
+            x_length=item_dx,
+            y_length=item_dy,
+            z_length=item_dz
+        )
+
+        if item.id in self.item_meshes:
+                self.plotter.remove_actor(self.item_meshes[item.id], render=False)
+
+        self.item_meshes[item.id] = self.plotter.add_mesh(
+            item_mesh,
+            color=item_color,
+            opacity=1.0
+        )
+        self.plotter.render()
+
+    def remove_item_from_visualization(self, item_id):
+        if self.plotter is None:
+           return
+        if item_id in self.item_meshes:
+            self.plotter.remove_actor(self.item_meshes[item_id])
+            del self.item_meshes[item_id]
+            self.plotter.render()
+
     def visualize(self):
-        plotter = pv.Plotter()
-        plotter.set_background('white')
-        visualized_items = set()
+        pass
+
+    def start_visualization(self):
+        if self.show_vis:
+            if self.plotter is not None:
+                self.plotter.close()
+                self.plotter.deep_clean()
+                del self.plotter
+
+            self.plotter = pv.Plotter()
+            self.plotter.set_background('white')
+            for zone in self.zones:
+                self._add_racks_to_visualization(zone)
+            self.plotter.show(auto_close=False, interactive_update=True)
+
+
+    def show_final_state(self):
+        if self.plotter:
+            self.plotter.close()
+            self.plotter.deep_clean()
+            del self.plotter
+            self.plotter = None
+            time.sleep(0.1)
+
+
+        final_plotter = pv.Plotter()
+        final_plotter.set_background((220/255, 220/255, 220/255))
 
         for zone in self.zones:
             for aisle in zone.aisles:
                 for rack in aisle.racks:
                     x, y, z = rack.coordinates
                     dx, dy, dz = rack.dimensions
-                    
                     rack_mesh = pv.Cube(
-                        center=(x + dx/2, y + dy/2, z + dz/2),
+                        center=(x + dx / 2, y + dy / 2, z + dz / 2),
                         x_length=dx, y_length=dy, z_length=dz
                     )
-                    plotter.add_mesh(rack_mesh, color="lightgray", opacity=0.5, show_edges=True)
+                    final_plotter.add_mesh(rack_mesh, color="lightgray", opacity=0.3, show_edges=True)
 
-                    for i in range(dx):
-                        for j in range(dy):
-                            for k in range(dz):
+                    for i in range(rack.dimensions[0]):
+                        for j in range(rack.dimensions[1]):
+                            for k in range(rack.dimensions[2]):
                                 item = rack.storage[i, j, k]
-                                if item and item.id not in visualized_items:
-                                    visualized_items.add(item.id)
-                                    item_color = item_directory[item.category][item.sub_category]
-                                    
+                                if item is not None:
                                     item_dx, item_dy, item_dz = item.dimensions
+                                    item_color = item_directory[item.category][item.sub_category]
                                     item_mesh = pv.Cube(
                                         center=(
-                                            x + i + item_dx/2, 
-                                            y + j + item_dy/2, 
-                                            z + k + item_dz/2
+                                            x + i + item_dx / 2,
+                                            y + j + item_dy / 2,
+                                            z + k + item_dz / 2
                                         ),
-                                        x_length=item_dx, 
-                                        y_length=item_dy, 
+                                        x_length=item_dx,
+                                        y_length=item_dy,
                                         z_length=item_dz
                                     )
-                                    
-                                    plotter.add_mesh(
-                                        item_mesh, 
-                                        color=item_color, 
-                                        opacity=1.0
-                                    )
+                                    final_plotter.add_mesh(item_mesh, color=item_color, opacity=1.0)
+        final_plotter.show()
 
-        plotter.enable_trackball_style()
-        def set_zoom(value):
-            plotter.camera.zoom(value)
-            plotter.render()
-
-        plotter.add_slider_widget(
-            callback=set_zoom,
-            rng=[0.1, 2.0],
-            value=1.0,
-            title='Zoom Level',
-            pointa=(0.1, 0.1),
-            pointb=(0.4, 0.1)
-        )
-        plotter.show()
-        plotter.close()
-
-def build_sample_warehouse(num_zones, num_aisles, num_racks, rack_dimensions, rack_spacing):
-    warehouse = Warehouse()
+def build_sample_warehouse(num_zones, num_aisles, num_racks, rack_dimensions, rack_spacing, show_vis=False):
+    warehouse = Warehouse(show_vis=show_vis)
     for z_idx in range(num_zones):
         zone = Zone(id=f"Z{z_idx}", description=f"Zone {z_idx}")
         for a_idx in range(num_aisles):
@@ -195,10 +291,8 @@ def build_sample_warehouse(num_zones, num_aisles, num_racks, rack_dimensions, ra
     return warehouse
 
 
-# This should be updated to make it more maintainable. Instead of using populate warehouse function, 
-# We should pass a list of items directly to the warehouse object and warehouse should take care of placing those.
-# So basically move this logic into warehouse class.
 def populate_warehouse(warehouse, num_items):
+    added_items = []
     for i in range(num_items):
         category = random.choice(list(item_directory.keys()))
         sub_category = random.choice(list(item_directory[category].keys()))
@@ -210,8 +304,29 @@ def populate_warehouse(warehouse, num_items):
         rack, position = warehouse.add_item(item)
         if rack is None:
             print(f"No space found for {product_name}")
+        else:
+            added_items.append(item)
+            if warehouse.show_vis:
+                time.sleep(0.2)
+    return added_items
 
-# warehouse = build_sample_warehouse(num_zones=2, num_aisles=3, num_racks=2,
-#                                   rack_dimensions=(5, 4, 6), rack_spacing=(2, 2, 0.5))
-# populate_warehouse(warehouse, 30)
-# warehouse.visualize()
+# warehouse = build_sample_warehouse(
+#     num_zones=2,
+#     num_aisles=3,
+#     num_racks=2,
+#     rack_dimensions=(5, 4, 6),
+#     rack_spacing=(2, 2, 0.5),
+#     show_vis=True
+# )
+
+# warehouse.start_visualization()
+
+# populate_warehouse(warehouse, 20)
+
+# removed_item = warehouse.undo_item()
+# if removed_item:
+#     print(f"Removed {removed_item.product_name}")
+
+# populate_warehouse(warehouse, 5)
+
+# warehouse.show_final_state()
