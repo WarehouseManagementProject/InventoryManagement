@@ -4,6 +4,8 @@ import numpy as np
 import math
 from warehouse import build_sample_warehouse
 
+""" still working on it"""
+
 class GeneticAlgorithm:
     def __init__(self, warehouse, population_size=500, generations=100, crossover_rate=0.8, mutation_rate=0.3):
         self.initial_warehouse = warehouse
