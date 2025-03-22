@@ -105,14 +105,13 @@ class GeneticAlgorithm:
         return best_candidate
 
 # Example usage:
-# First, build and populate your warehouse using your existing functions.
 warehouse = build_sample_warehouse(
     num_zones=3,
     num_aisles=4,
     num_racks=3,
     rack_dimensions=(6, 5, 6),
     rack_spacing=(2, 2, 0.5),
-    show_vis=True  # Set to True if you want visualization during population
+    show_vis=True
 )
 populate_warehouse(warehouse, 1000)
 
