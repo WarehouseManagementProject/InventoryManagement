@@ -159,7 +159,7 @@ class Warehouse:
                                 if self.show_vis:
                                     self.add_item_to_visualization(item, rack, position)
 
-                                return rack, position
+                                return rack, position, zone, aisle
         return None, None
 
     def undo_item(self):
@@ -301,7 +301,7 @@ def populate_warehouse(warehouse, num_items):
         product_name = f"Item_{i}"
         retrieval_urgency = random.randint(1, 5)
         item = Item(category, sub_category, weight, dimensions, product_name, retrieval_urgency)
-        rack, position = warehouse.add_item(item)
+        rack, position, zone, aisle = warehouse.add_item(item)
         if rack is None:
             print(f"No space found for {product_name}")
         else:
