@@ -1,0 +1,40 @@
+import numpy as np
+from warehouse import Warehouse, Item, Rack, build_sample_warehouse, item_directory
+import random
+class SimulatedAnn():
+    def __init__(self, warehouse,items):
+        self.warehouse = warehouse
+        self.listOfItems = items
+        self.currEntropy = None
+
+    # def entropy(self):
+        
+        
+    
+
+    # def pickNextNeighbour(self):
+    #     return
+    
+    # def train(self):
+    #     for item in self.listOfItems:
+    #         while True:
+
+
+
+def generateItems(num_items):
+    generatedItems = []
+    for i in range(num_items):
+        category = random.choice(list(item_directory.keys()))
+        sub_category = random.choice(list(item_directory[category].keys()))
+        weight = random.uniform(0.1, 5.0)
+        dimensions = (random.randint(1,3), random.randint(1,2), random.randint(1,2))
+        product_name = f"Item_{i}"
+        retrieval_urgency = random.randint(1, 5)
+        item = Item(category, sub_category, weight, dimensions, product_name, retrieval_urgency)
+        generatedItems.append(item)
+        print(category, sub_category)
+    return generatedItems
+
+generateItems(5)
+print(list(item_directory.keys()))
+

@@ -38,12 +38,14 @@ class Item:
         self.id = f"{product_name}_{category}_{sub_category}"
 
 class Rack:
-    def __init__(self, dimensions, coordinates):
+    def __init__(self, dimensions, coordinates, category = None, subCategory = None):
         self.dimensions = dimensions
         self.coordinates = coordinates
         self.id = f"Rack_{coordinates[0]}_{coordinates[1]}_{coordinates[2]}"
         self.description = f"Rack at {coordinates}"
         self.storage = np.empty(dimensions, dtype=object)
+        self.category = category
+        self.subCategory = subCategory
 
     def place_item(self, item, position):
         if 0 <= position[0] < self.dimensions[0] and 0 <= position[1] < self.dimensions[1] and 0 <= position[2] < self.dimensions[2]:
@@ -93,10 +95,12 @@ class Rack:
         return supported_positions
 
 class Aisle:
-    def __init__(self, id, description):
+    def __init__(self, id, description, category = None):
         self.racks = []
         self.id = id
         self.description = description
+        self.category = category
+        self.sub_category = random.choice(list(item_directory[category].keys()))
 
     def add_rack(self, rack):
         self.racks.append(rack)
@@ -106,6 +110,7 @@ class Zone:
         self.aisles = []
         self.id = id
         self.description = description
+        self.category = random.choice(list(item_directory.keys()))
 
     def add_aisle(self, aisle):
         self.aisles.append(aisle)
@@ -278,13 +283,14 @@ def build_sample_warehouse(num_zones, num_aisles, num_racks, rack_dimensions, ra
     warehouse = Warehouse(show_vis=show_vis)
     for z_idx in range(num_zones):
         zone = Zone(id=f"Z{z_idx}", description=f"Zone {z_idx}")
+        zoneCategory = zone.category
         for a_idx in range(num_aisles):
-            aisle = Aisle(id=f"A{a_idx}", description=f"Aisle {a_idx} in Zone {z_idx}")
+            aisle = Aisle(id=f"A{a_idx}", description=f"Aisle {a_idx} in Zone {z_idx}",category=zoneCategory)
             for r_idx in range(num_racks):
                 rack_coords = (a_idx * (rack_dimensions[0] + rack_spacing[0]),
                                z_idx * (rack_dimensions[1] + rack_spacing[1]),
                                r_idx * (rack_dimensions[2] + rack_spacing[2]))
-                rack = Rack(dimensions=rack_dimensions, coordinates=rack_coords)
+                rack = Rack(dimensions=rack_dimensions, coordinates=rack_coords, category=zoneCategory, subCategory=aisle.sub_category)
                 aisle.add_rack(rack)
             zone.add_aisle(aisle)
         warehouse.add_zone(zone)
@@ -310,23 +316,23 @@ def populate_warehouse(warehouse, num_items):
                 time.sleep(0.2)
     return added_items
 
-# warehouse = build_sample_warehouse(
-#     num_zones=2,
-#     num_aisles=3,
-#     num_racks=2,
-#     rack_dimensions=(5, 4, 6),
-#     rack_spacing=(2, 2, 0.5),
-#     show_vis=True
-# )
+warehouse = build_sample_warehouse(
+    num_zones=2,
+    num_aisles=3,
+    num_racks=2,
+    rack_dimensions=(5, 4, 6),
+    rack_spacing=(2, 2, 0.5),
+    show_vis=True
+)
 
-# warehouse.start_visualization()
+warehouse.start_visualization()
 
-# populate_warehouse(warehouse, 20)
+populate_warehouse(warehouse, 20)
 
-# removed_item = warehouse.undo_item()
-# if removed_item:
-#     print(f"Removed {removed_item.product_name}")
+removed_item = warehouse.undo_item()
+if removed_item:
+    print(f"Removed {removed_item.product_name}")
 
-# populate_warehouse(warehouse, 5)
+populate_warehouse(warehouse, 60)
 
-# warehouse.show_final_state()
+warehouse.show_final_state()
