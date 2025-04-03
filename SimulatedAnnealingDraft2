@@ -2,22 +2,34 @@ import numpy as np
 from warehouse import Warehouse, Item, Rack, build_sample_warehouse, item_directory
 import random
 class SimulatedAnn():
-    def __init__(self, warehouse,items):
+    def __init__(self, warehouse: Warehouse,items:list[Item]):
         self.warehouse = warehouse
         self.listOfItems = items
+        self.unPlacedItems = len(self.listOfItems)
         self.currEntropy = None
-
-    # def entropy(self):
-        
-        
     
+    def calculateEntropy(self,item, rack, position, zone, aisle):
 
-    # def pickNextNeighbour(self):
-    #     return
+        # category
+        #sub category
+        #retrieval urgency
+        #weight
+        #unplaced items
+        return 0
     
-    # def train(self):
-    #     for item in self.listOfItems:
-    #         while True:
+    def train(self, initalTemperature=10000, decay=0.999):
+        for item in self.listOfItems:
+            isItemPlaced = False
+            while isItemPlaced==False:
+                rack, position, zone, aisle = self.warehouse.add_item(item)
+                if not rack:
+                    continue
+                entropy = self.calculateEntropy(item, rack, position, zone, aisle)
+
+
+
+
+    
 
 
 
@@ -32,9 +44,9 @@ def generateItems(num_items):
         retrieval_urgency = random.randint(1, 5)
         item = Item(category, sub_category, weight, dimensions, product_name, retrieval_urgency)
         generatedItems.append(item)
-        print(category, sub_category)
     return generatedItems
 
-generateItems(5)
-print(list(item_directory.keys()))
+items = generateItems(10)
+for item in items:
+    print(item.category)
 
