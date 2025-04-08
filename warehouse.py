@@ -316,23 +316,23 @@ def populate_warehouse(warehouse, num_items):
                 time.sleep(0.2)
     return added_items
 
-# warehouse = build_sample_warehouse(
-#     num_zones=2,
-#     num_aisles=3,
-#     num_racks=2,
-#     rack_dimensions=(5, 4, 6),
-#     rack_spacing=(2, 2, 0.5),
-#     show_vis=True
-# )
+warehouse = build_sample_warehouse(
+    num_zones=2,
+    num_aisles=3,
+    num_racks=2,
+    rack_dimensions=(5, 4, 6),
+    rack_spacing=(2, 2, 0.5),
+    show_vis=True
+)
 
-# warehouse.start_visualization()
+warehouse.start_visualization()
 
-# populate_warehouse(warehouse, 20)
+populate_warehouse(warehouse, 20)
 
-# removed_item = warehouse.undo_item()
-# if removed_item:
-#     print(f"Removed {removed_item.product_name}")
+removed_item = warehouse.undo_item()
+if removed_item:
+    print(f"Removed {removed_item.product_name}")
 
-# populate_warehouse(warehouse, 60)
+populate_warehouse(warehouse, 60)
 
-# warehouse.show_final_state()
+warehouse.show_final_state()

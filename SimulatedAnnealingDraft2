@@ -10,11 +10,24 @@ class SimulatedAnn():
     
     def calculateEntropy(self,item, rack, position, zone, aisle):
 
-        # category
-        #sub category
+        # category and sub-category
+        category_score = 0
+        if item.category ==zone.category:
+            category_score+=10
+            if item.sub_category==aisle.sub_category:
+                category_score+=15
+        else:
+            category_score-=25
+        
         #retrieval urgency
-        #weight
+        dist_from_origin = abs(position[0])+abs(position[1]+position[2]) #manhattan distance
+        distance_score = dist_from_origin*item.retrieval_urgency
+        #weight - checking how high is the rack in the aisle:
+        weight_score = position[1]*item.weight
         #unplaced items
+        # -10 because we just placed an item
+        #This calculates only the change in entropy. #add it to the current entropy to get the actual E.
+        entropy = (2*(category_score)) + (0.8*(distance_score)) + (0.4*weight_score) - 10
         return 0
     
     def train(self, initalTemperature=10000, decay=0.999):
