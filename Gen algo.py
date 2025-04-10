@@ -3,6 +3,7 @@ import random
 import numpy as np
 import math
 from warehouse import build_sample_warehouse, populate_warehouse
+from warehouse import item_directory
 
 """
 Genetic Algorithm that performs cross-rack swaps:
@@ -17,103 +18,55 @@ class GeneticAlgorithm:
     def __init__(
         self,
         warehouse,
-        population_size=300,
-        generations=100,
-        crossover_rate=0.8,
-        mutation_rate=0.3,
-        fallback_prob=0.05,
-        elitism_rate=0.05
+        ga_config
     ):
         self.initial_warehouse = warehouse
-        self.population_size = population_size
-        self.generations = generations
-        self.crossover_rate = crossover_rate
-        self.mutation_rate = mutation_rate
-        self.fallback_prob = fallback_prob
-        self.elitism_rate = elitism_rate
-        self.population = []
+        self.__dict__.update(ga_config)
+
+
 
     def objective_function(self, warehouse):
-        """
-        Revised objective function that:
-        - Removes zone-level penalty for the dock zone.
-        - Applies lower aisle and rack level diversity penalties in the dock zone vs. higher penalties elsewhere.
-        """
         total_cost = 0.0
-        dock = np.array([0, 0, 0])
-        dock_zone = warehouse.zones[0]
+        w_zone = 50.0      # Highest penalty for zone category mismatch
+        w_aisle = 30.0     # Aisle subcategory mismatch
+        w_rack = 30.0      # Rack subcategory mismatch
+        w_high_urgency = 40.0  # High urgency item not in bottom rack
+        high_urgency_threshold = 4
+        zone_categories = list(item_directory.keys())
 
-        # Penalty weights :
-        w_zone          = 1.0   # zone-level penalty (for zones other than dock_zone)
-        w_aisle_dock    = 5.0   # aisle-level penalty inside dock zone
-        w_aisle_other   = 10.0  # aisle-level penalty for other zones
-        w_rack_dock     = 2.0   # rack-level penalty inside dock zone
-        w_rack_other    = 3.0   # rack-level penalty for other zones
-
-        # 1. RETRIEVAL COST
-        for zone in warehouse.zones:
-            for aisle in zone.aisles:
-                for rack in aisle.racks:
-                    rack_base = np.array(rack.coordinates, dtype=float)
-                    for i in range(rack.dimensions[0]):
-                        for j in range(rack.dimensions[1]):
-                            for k in range(rack.dimensions[2]):
-                                item = rack.storage[i, j, k]
-                                if item is not None:
-                                    item_pos = rack_base + np.array([i, j, k], dtype=float)
-                                    distance = np.sum(np.abs(item_pos - dock))
-                                    total_cost += item.retrieval_urgency * distance
-                                    if item.retrieval_urgency >= 4 and zone != dock_zone:
-                                        total_cost += 20.0
-
-        # 2. ZONE-LEVEL PENALTY (skip for the dock zone)
-        for z_idx, zone in enumerate(warehouse.zones):
-            if zone == dock_zone:
-                continue  # No zone-level penalty in the dock zone
-            category_counts = {}
-            total_items = 0
+        # 1. Zone Category Enforcement
+        for zone_idx, zone in enumerate(warehouse.zones):
+            expected_category = zone_categories[zone_idx % 4]
             for aisle in zone.aisles:
                 for rack in aisle.racks:
                     for i in range(rack.dimensions[0]):
                         for j in range(rack.dimensions[1]):
                             for k in range(rack.dimensions[2]):
                                 item = rack.storage[i, j, k]
-                                if item is not None:
-                                    total_items += 1
-                                    cat = item.category
-                                    category_counts[cat] = category_counts.get(cat, 0) + 1
-            if total_items > 0:
-                max_count = max(category_counts.values())
-                diversity = total_items - max_count
-                total_cost += w_zone * diversity
+                                if item and item.category != expected_category:
+                                    total_cost += w_zone 
 
-        # 3. AISLE-LEVEL PENALTY
+        # 2. Aisle Subcategory Penalty
         for zone in warehouse.zones:
-            # Decide aisle penalty weight based on whether we're in the dock zone or not
-            aisle_weight = w_aisle_dock if zone == dock_zone else w_aisle_other
-
             for aisle in zone.aisles:
-                category_counts = {}
+                subcat_counts = {}
                 total_items = 0
                 for rack in aisle.racks:
                     for i in range(rack.dimensions[0]):
                         for j in range(rack.dimensions[1]):
                             for k in range(rack.dimensions[2]):
                                 item = rack.storage[i, j, k]
-                                if item is not None:
+                                if item:
                                     total_items += 1
-                                    cat = item.category
-                                    category_counts[cat] = category_counts.get(cat, 0) + 1
+                                    subcat = item.sub_category
+                                    subcat_counts[subcat] = subcat_counts.get(subcat, 0) + 1
                 if total_items > 0:
-                    max_count = max(category_counts.values())
-                    diversity = total_items - max_count
-                    total_cost += aisle_weight * diversity
+                    dominant = max(subcat_counts.values(), default=0)
+                    penalty = w_aisle * (total_items - dominant)
+                    total_cost += penalty
 
-        # 4. RACK-LEVEL PENALTY
+        # 3. Rack Subcategory Penalty
         for zone in warehouse.zones:
-            # Decide rack penalty weight based on whether we're in the dock zone or not
-            rack_weight = w_rack_dock if zone == dock_zone else w_rack_other
-
             for aisle in zone.aisles:
                 for rack in aisle.racks:
                     subcat_counts = {}
@@ -122,18 +75,31 @@ class GeneticAlgorithm:
                         for j in range(rack.dimensions[1]):
                             for k in range(rack.dimensions[2]):
                                 item = rack.storage[i, j, k]
-                                if item is not None:
+                                if item:
                                     total_items += 1
                                     subcat = item.sub_category
                                     subcat_counts[subcat] = subcat_counts.get(subcat, 0) + 1
                     if total_items > 0:
-                        max_count = max(subcat_counts.values())
-                        diversity = total_items - max_count
-                        total_cost += rack_weight * diversity
+                        dominant = max(subcat_counts.values(), default=0)
+                        penalty = w_rack * (total_items - dominant)
+                        total_cost += penalty
 
+        # 4. High Urgency Item(must be in bottom rack of aisle)
+        for zone in warehouse.zones:
+            for aisle in zone.aisles:
+                if not aisle.racks:
+                    continue
+                bottom_rack = aisle.racks[0]
+                for rack in aisle.racks:
+                    is_bottom_rack = (rack == bottom_rack)
+                    for i in range(rack.dimensions[0]):
+                        for j in range(rack.dimensions[1]):
+                            for k in range(rack.dimensions[2]):
+                                item = rack.storage[i, j, k]
+                                if item and item.retrieval_urgency >= high_urgency_threshold:
+                                    if not is_bottom_rack:
+                                        total_cost += w_high_urgency  # Penalty if not in bottom rack
         return total_cost
-
-
 
     def generate_initial_population(self):
         """Generate an initial population of candidate warehouse states by random mutations."""
@@ -270,19 +236,19 @@ class GeneticAlgorithm:
 
     def crossover(self, parent1, parent2):
         """
-        Perform uniform crossover between two parent warehouse states.
-        For each position in the warehouse storage, with 50% probability, copy the item from parent2.
+        Perform a rack-level crossover between two parent warehouse states.
+        For each rack, with 50% probability, the entire rack (i.e., its storage)
+        is swapped from parent2 into the child.
         """
         child = copy.deepcopy(parent1)
         for z_idx, zone in enumerate(child.zones):
             for a_idx, aisle in enumerate(zone.aisles):
                 for r_idx, rack in enumerate(aisle.racks):
-                    rack_p2 = parent2.zones[z_idx].aisles[a_idx].racks[r_idx]
-                    for i in range(rack.dimensions[0]):
-                        for j in range(rack.dimensions[1]):
-                            for k in range(rack.dimensions[2]):
-                                if random.random() < 0.5:
-                                    child.zones[z_idx].aisles[a_idx].racks[r_idx].storage[i, j, k] = rack_p2.storage[i, j, k]
+                    if random.random() < 0.5:
+                        # Swap the entire rack storage from parent2
+                        child.zones[z_idx].aisles[a_idx].racks[r_idx].storage = copy.deepcopy(
+                            parent2.zones[z_idx].aisles[a_idx].racks[r_idx].storage
+                        )
         return child
 
     def select_parent(self):
@@ -347,25 +313,36 @@ class GeneticAlgorithm:
 
 if __name__ == "__main__":
     warehouse = build_sample_warehouse(
-        num_zones=7,
-        num_aisles=4,
+        num_zones=5,
+        num_aisles=3,
         num_racks=2,
         rack_dimensions=(5, 4, 6),
         rack_spacing=(2, 2, 0.5),
-        show_vis=False
+        show_vis=True
     )
 
-    populate_warehouse(warehouse, 300)
+    populate_warehouse(warehouse, 200)
+    initial_state = copy.deepcopy(warehouse)
 
-    ga = GeneticAlgorithm(
-        warehouse,
-        population_size=300,
-        generations=100,
-        crossover_rate=0.8,
-        mutation_rate=0.3,
-        fallback_prob=0.05,
-        elitism_rate=0.05
-    )
+    ga_config = {
+    "population_size": 200,
+    "generations": 100,
+    "crossover_rate": 0.8,
+    "mutation_rate": 0.3,
+    "fallback_prob": 0.05,
+    "elitism_rate": 0.05,
+    "dock_zone_index": 0  # The first zone will be used as the dock zone
+}
+
+    ga = GeneticAlgorithm(warehouse, ga_config)
 
     optimized_warehouse = ga.run()
-    # optimized_warehouse.visualize()
+
+    initial_state.show_vis = True
+    optimized_warehouse.show_vis = True
+
+    print("Initial warehouse state:")
+    initial_state.show_final_state()
+
+    print("Optimized warehouse state:")
+    optimized_warehouse.show_final_state()
