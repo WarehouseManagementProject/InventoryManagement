@@ -7,6 +7,7 @@ class SimulatedAnn():
         self.listOfItems = items
         self.unPlacedItems = len(self.listOfItems)
         self.currEntropy = self.unPlacedItems*35
+        print(self.currEntropy)
     
     def calculateChangeInEntropy(self,item, rack, position, zone, aisle):
 
@@ -17,7 +18,7 @@ class SimulatedAnn():
             if item.sub_category==aisle.sub_category:
                 category_score-=15
         else:
-            category_score+=25
+            category_score+=55
         
         #retrieval urgency
         dist_from_origin = abs(position[0])+abs(position[1]+position[2]) #manhattan distance
@@ -27,19 +28,25 @@ class SimulatedAnn():
         #unplaced items
         # -10 because we just placed an item
         #This calculates only the change in entropy. #add it to the current entropy to get the actual E.
-        entropy = (2*(category_score)) + (0.8*(distance_score)) + (0.4*weight_score) - 35
-        return 0
+        entropy = (2*(category_score)) + (0.4*(distance_score)) + (0.4*weight_score) - 35
+        return entropy
     
-    def train(self, initalTemperature=10000, decay=0.999):
+    def train(self, initalTemperature=1000, decay=0.9):
         for item in self.listOfItems:
-            print(item.category)
+            # print(item.category)
             isItemPlaced = False
+            print("Curr loss ",self.currEntropy)
+            tries = 0
             while isItemPlaced==False:
-                print("check")
+                
                 rack, position, zone, aisle = self.warehouse.add_item(item)
                 if not rack:
+                    tries+=1
+                    print("hello")
                     continue
-                entropy_change = self.calculateEntropy(item, rack, position, zone, aisle)
+                if tries == 10000:
+                    break
+                entropy_change = self.calculateChangeInEntropy(item, rack, position, zone, aisle)
                 new_entropy = self.currEntropy + entropy_change
                 if self.currEntropy>new_entropy:
                     self.currEntropy = new_entropy
@@ -57,14 +64,17 @@ class SimulatedAnn():
 
 
 
+warehouse = build_sample_warehouse(
+    num_zones=6,
+    num_aisles=3,
+    num_racks=3,
+    rack_dimensions=(5, 4, 6),
+    rack_spacing=(2, 2, 0.5),
+    show_vis=True
+)
 
-
-
-
-    
-
-
-warehouse = Warehouse(True)
+warehouse.start_visualization()
+# warehouse = Warehouse(True)
 def generateItems(num_items):
     generatedItems = []
     for i in range(num_items):
@@ -78,6 +88,8 @@ def generateItems(num_items):
         generatedItems.append(item)
     return generatedItems
 
-items = generateItems(30)
+
+items = generateItems(400)
 SimulatedAnnealing  = SimulatedAnn(warehouse,items)
 new_Warehouse = SimulatedAnnealing.train()
+warehouse.show_final_state()

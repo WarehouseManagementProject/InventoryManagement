@@ -335,4 +335,4 @@ def populate_warehouse(warehouse, num_items):
 
 # populate_warehouse(warehouse, 60)
 
-# warehouse.show_final_state()
+# 
