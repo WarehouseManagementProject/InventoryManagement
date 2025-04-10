@@ -21,7 +21,7 @@ class GeneticAlgorithm:
         ga_config
     ):
         self.initial_warehouse = warehouse
-        self.__dict__.update(ga_config)  # Now attributes like population_size, generations, etc. are set
+        self.__dict__.update(ga_config)
 
 
 
