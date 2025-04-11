@@ -13,6 +13,15 @@ Genetic Algorithm that performs cross-rack swaps:
   plus one rack that has at least one supported empty slot,
   then moves an item from the first to a supported empty position in the second.
 """
+def count_unique_items(warehouse):
+    seen_items = set()
+    for zone in warehouse.zones:
+        for aisle in zone.aisles:
+            for rack in aisle.racks:
+                for cell_item in rack.storage.flatten():
+                    if cell_item is not None:
+                        seen_items.add(cell_item.id)
+    return len(seen_items)
 
 class GeneticAlgorithm:
     def __init__(
@@ -23,18 +32,16 @@ class GeneticAlgorithm:
         self.initial_warehouse = warehouse
         self.__dict__.update(ga_config)
 
-
-
     def objective_function(self, warehouse):
         total_cost = 0.0
-        w_zone = 50.0      # Highest penalty for zone category mismatch
-        w_aisle = 30.0     # Aisle subcategory mismatch
-        w_rack = 30.0      # Rack subcategory mismatch
-        w_high_urgency = 40.0  # High urgency item not in bottom rack
+        w_zone = 200.0      # Highest penalty for zone category mismatch
+        w_aisle = 50.0     # Aisle subcategory mismatch
+        w_rack = 150.0      # Rack subcategory mismatch
+        w_high_urgency = 150.0  # High urgency item not in bottom rack
         high_urgency_threshold = 4
         zone_categories = list(item_directory.keys())
 
-        # 1. Zone Category Enforcement
+        # 1. Zone Category penalty
         for zone_idx, zone in enumerate(warehouse.zones):
             expected_category = zone_categories[zone_idx % 4]
             for aisle in zone.aisles:
@@ -98,7 +105,7 @@ class GeneticAlgorithm:
                                 item = rack.storage[i, j, k]
                                 if item and item.retrieval_urgency >= high_urgency_threshold:
                                     if not is_bottom_rack:
-                                        total_cost += w_high_urgency  # Penalty if not in bottom rack
+                                        total_cost += w_high_urgency
         return total_cost
 
     def generate_initial_population(self):
@@ -113,46 +120,48 @@ class GeneticAlgorithm:
 
     def mutate(self, warehouse):
         """
-        Mutate the warehouse state by doing a cross-rack swap:
-        1) item-to-item:
-           - pick 2 distinct racks that each have at least 1 item
-           - swap a random occupied cell in rack1 with a random occupied cell in rack2
+        1) item-to-item swap:
+            - pick 2 racks that each have at least 1 occupied cell
+            - pick one occupied cell in rack1, one in rack2
+            - swap them (only those single cells)
         2) item-to-empty:
-           - pick 1 rack that has at least 1 occupied cell
-           - pick 1 rack that has at least 1 supported empty cell
+            - pick 1 rack that has at least 1 occupied cell
+            - pick 1 rack that has at least 1 empty cell
+            - move one single cell from the first rack to one empty cell in the second rack
         """
+
         original_cost = self.objective_function(warehouse)
-        new_warehouse = copy.deepcopy(warehouse)
 
-        # Step 1: Build lists of racks that have items, and racks that have
-        # supported empty slots.
-
+        # 2) Gather racks_with_items and racks_with_empty
         racks_with_items = []
         racks_with_empty = []
-        for zone in new_warehouse.zones:
+        for zone in warehouse.zones:
             for aisle in zone.aisles:
                 for rack in aisle.racks:
-                    # Checking if rack has at least one item
-                    has_item = any(item is not None for item in rack.storage.flatten())
-                    # Checking if rack has at least one supported empty slot
-                    supported_empty_positions = [
-                        p for p in rack.get_supported_positions()
-                        if rack.storage[p] is None
-                    ]
-                    has_supported_empty = (len(supported_empty_positions) > 0)
-
-                    if has_item:
+                    # Check if there's at least one occupied cell
+                    occupied_positions = [(i, j, k)
+                                        for i in range(rack.dimensions[0])
+                                        for j in range(rack.dimensions[1])
+                                        for k in range(rack.dimensions[2])
+                                        if rack.storage[i, j, k] is not None]
+                    if occupied_positions:
                         racks_with_items.append(rack)
-                    if has_supported_empty:
+
+                    empty_positions = [(i, j, k)
+                                    for i in range(rack.dimensions[0])
+                                    for j in range(rack.dimensions[1])
+                                    for k in range(rack.dimensions[2])
+                                    if rack.storage[i, j, k] is None]
+                    if empty_positions:
                         racks_with_empty.append(rack)
 
+        # If there aren't enough racks to do item-to-item or item-to-empty, skip mutation
         item_to_item_possible = (len(racks_with_items) >= 2)
         item_to_empty_possible = (len(racks_with_items) >= 1 and len(racks_with_empty) >= 1)
-
         if not item_to_item_possible and not item_to_empty_possible:
-            print("No cross-rack swap possible, skipping mutation.")
             return warehouse
 
+        # Decide which operation
         if item_to_item_possible and item_to_empty_possible:
             do_item_to_item = (random.random() < 0.5)
         elif item_to_item_possible:
@@ -160,102 +169,199 @@ class GeneticAlgorithm:
         else:
             do_item_to_item = False
 
-        # Step 2: Perform the chosen cross-rack operation
+        # Store the changed cells so as to revert if cost doesn't improve
+        changes = [] 
+
+        def revert():
+            for rack, (pos, old_val) in changes:
+                rack.storage[pos] = old_val
+
+        # 3) Perform the chosen operation
         if do_item_to_item:
+            # ITEM-to-ITEM SWAP
             rack1, rack2 = random.sample(racks_with_items, 2)
 
-            all_positions_1 = [
-                (i, j, k)
-                for i in range(rack1.dimensions[0])
-                for j in range(rack1.dimensions[1])
-                for k in range(rack1.dimensions[2])
-                if rack1.storage[i, j, k] is not None
-            ]
-            all_positions_2 = [
-                (i, j, k)
-                for i in range(rack2.dimensions[0])
-                for j in range(rack2.dimensions[1])
-                for k in range(rack2.dimensions[2])
-                if rack2.storage[i, j, k] is not None
-            ]
-            if not all_positions_1 or not all_positions_2:
-                #print("Cannot do item-to-item swap: one rack is unexpectedly empty.")
+            # Pick a random occupied cell from each
+            occupied1 = [(i, j, k)
+                        for i in range(rack1.dimensions[0])
+                        for j in range(rack1.dimensions[1])
+                        for k in range(rack1.dimensions[2])
+                        if rack1.storage[i, j, k] is not None]
+            occupied2 = [(i, j, k)
+                        for i in range(rack2.dimensions[0])
+                        for j in range(rack2.dimensions[1])
+                        for k in range(rack2.dimensions[2])
+                        if rack2.storage[i, j, k] is not None]
+
+            if not occupied1 or not occupied2:
                 return warehouse
 
-            pos1 = random.choice(all_positions_1)
-            pos2 = random.choice(all_positions_2)
+            pos1 = random.choice(occupied1)
+            pos2 = random.choice(occupied2)
 
             item1 = rack1.storage[pos1]
             item2 = rack2.storage[pos2]
 
-            rack1.storage[pos1], rack2.storage[pos2] = item2, item1
+            changes.append((rack1, (pos1, item1)))
+            changes.append((rack2, (pos2, item2)))
+
+            # Perform the swap
+            rack1.storage[pos1] = item2
+            rack2.storage[pos2] = item1
 
         else:
+            # ITEM-to-EMPTY MOVE
             rack_with_items = random.choice(racks_with_items)
             rack_with_empty = random.choice(racks_with_empty)
 
-            occupied_positions = [
-                (i, j, k)
-                for i in range(rack_with_items.dimensions[0])
-                for j in range(rack_with_items.dimensions[1])
-                for k in range(rack_with_items.dimensions[2])
-                if rack_with_items.storage[i, j, k] is not None
-            ]
-            supported_empty_positions = [
-                (i, j, k)
-                for i, j, k in rack_with_empty.get_supported_positions()
-                if rack_with_empty.storage[i, j, k] is None
-            ]
+            occupied_positions = [(i, j, k)
+                                for i in range(rack_with_items.dimensions[0])
+                                for j in range(rack_with_items.dimensions[1])
+                                for k in range(rack_with_items.dimensions[2])
+                                if rack_with_items.storage[i, j, k] is not None]
+            empty_positions = [(i, j, k)
+                            for i in range(rack_with_empty.dimensions[0])
+                            for j in range(rack_with_empty.dimensions[1])
+                            for k in range(rack_with_empty.dimensions[2])
+                            if rack_with_empty.storage[i, j, k] is None]
 
-            if not occupied_positions or not supported_empty_positions:
-                #print("Cannot do item-to-empty swap: missing occupied or empty spots.")
+            if not occupied_positions or not empty_positions:
                 return warehouse
 
             pos1 = random.choice(occupied_positions)
-            pos2 = random.choice(supported_empty_positions)
+            pos2 = random.choice(empty_positions)
 
             item_to_move = rack_with_items.storage[pos1]
+
+            # Record old states for revert
+            changes.append((rack_with_items, (pos1, item_to_move)))
+            changes.append((rack_with_empty, (pos2, rack_with_empty.storage[pos2])))
+
             rack_with_items.storage[pos1] = None
             rack_with_empty.storage[pos2] = item_to_move
 
-        # Step 3: Accept/Reject the mutation
-        mutated_cost = self.objective_function(new_warehouse)
-        original_cost_epsilon = 1e-6
-
-        if mutated_cost < original_cost - original_cost_epsilon:
-            #print(f"Mutation accepted: cost improved from {original_cost:.6f} to {mutated_cost:.6f}")
-            return new_warehouse
+        # 4) Cost-based acceptance
+        mutated_cost = self.objective_function(warehouse)
+        if mutated_cost < (original_cost - 1e-6) or random.random() < self.fallback_prob:
+            return warehouse
         else:
-            # Accept with fallback probability (allowing some worse solutions)
-            if random.random() < self.fallback_prob:
-                #print(f"Mutation accepted (random chance) despite cost {mutated_cost:.6f} vs {original_cost:.6f}")
-                return new_warehouse
-            else:
-                #print(f"Mutation rejected: cost {mutated_cost:.6f} did not improve from {original_cost:.6f}")
-                return warehouse
+            revert()
+            return warehouse
+
 
     def crossover(self, parent1, parent2):
         """
-        Perform a rack-level crossover between two parent warehouse states.
-        For each rack, with 50% probability, the entire rack (i.e., its storage)
-        is swapped from parent2 into the child.
+        All-or-nothing item-level crossover:
+        1) Make a child with the same rack geometry as parent1 but empty.
+        2) Collect all items from both parents (union of their IDs).
+        3) Try to place each item into the child's racks.
+        4) If even one item can't be placed, revert by returning a deep copy of parent1.
+        
         """
+
+        # 1) Copy parent's geometry
         child = copy.deepcopy(parent1)
-        for z_idx, zone in enumerate(child.zones):
-            for a_idx, aisle in enumerate(zone.aisles):
-                for r_idx, rack in enumerate(aisle.racks):
-                    if random.random() < 0.5:
-                        # Swap the entire rack storage from parent2
-                        child.zones[z_idx].aisles[a_idx].racks[r_idx].storage = copy.deepcopy(
-                            parent2.zones[z_idx].aisles[a_idx].racks[r_idx].storage
-                        )
+        for zone in child.zones:
+            for aisle in zone.aisles:
+                for rack in aisle.racks:
+                    rack.storage.fill(None)  # Remove all items from child
+
+        # Helper to record item positions
+        def record_positions(warehouse):
+            positions = {}
+            for zone in warehouse.zones:
+                for aisle in zone.aisles:
+                    for rack in aisle.racks:
+                        for i in range(rack.dimensions[0]):
+                            for j in range(rack.dimensions[1]):
+                                for k in range(rack.dimensions[2]):
+                                    item = rack.storage[i, j, k]
+                                    if item is not None:
+                                        positions[item.id] = (rack, (i, j, k))
+            return positions
+
+        parent1_positions = record_positions(parent1)
+        parent2_positions = record_positions(parent2)
+
+        # All unique item IDs found in either parent
+        all_item_ids = set(parent1_positions.keys()).union(parent2_positions.keys())
+
+        def find_child_rack(child_warehouse, rack_id):
+            for z in child_warehouse.zones:
+                for a in z.aisles:
+                    for r in a.racks:
+                        if r.id == rack_id:
+                            return r
+            return None
+
+        def attempt_place_at_parent_coords(child_warehouse, item_id, parent_positions):
+            if item_id not in parent_positions:
+                return False
+            parent_rack, (i, j, k) = parent_positions[item_id]
+            parent_rack_id = parent_rack.id
+
+            item_obj = parent_rack.storage[i, j, k]
+            if not item_obj:
+                return False
+
+            child_rack = find_child_rack(child_warehouse, parent_rack_id)
+            if not child_rack:
+                return False
+
+            return child_rack.place_item(item_obj, (i, j, k))
+
+        # Fallback: try placing the item anywhere in the child
+        def attempt_place_anywhere(child_warehouse, item_obj):
+            for z in child_warehouse.zones:
+                for a in z.aisles:
+                    for r in a.racks:
+                        positions = r.get_supported_positions()
+                        random.shuffle(positions)
+                        for pos in positions:
+                            if r.place_item(item_obj, pos):
+                                return True
+            return False
+
+        # 2) Place each item. If any fail, revert to parent1 entirely.
+        for item_id in all_item_ids:
+            if item_id in parent1_positions and item_id in parent2_positions:
+                if random.random() < 0.5:
+                    first_positions = parent1_positions
+                    second_positions = parent2_positions
+                else:
+                    first_positions = parent2_positions
+                    second_positions = parent1_positions
+
+                # Attempt from the first parent's coords
+                if not attempt_place_at_parent_coords(child, item_id, first_positions):
+                    # If that fails, try the other parent's coords
+                    if not attempt_place_at_parent_coords(child, item_id, second_positions):
+                        item_obj = (first_positions[item_id][0].storage[first_positions[item_id][1]] 
+                                    if item_id in first_positions 
+                                    else second_positions[item_id][0].storage[second_positions[item_id][1]])
+                        if not attempt_place_anywhere(child, item_obj):
+                            return copy.deepcopy(parent1) 
+            elif item_id in parent1_positions:
+                if not attempt_place_at_parent_coords(child, item_id, parent1_positions):
+                    item_obj = parent1_positions[item_id][0].storage[parent1_positions[item_id][1]]
+                    if not attempt_place_anywhere(child, item_obj):
+                        return copy.deepcopy(parent1)
+            elif item_id in parent2_positions:
+                if not attempt_place_at_parent_coords(child, item_id, parent2_positions):
+                    item_obj = parent2_positions[item_id][0].storage[parent2_positions[item_id][1]]
+                    if not attempt_place_anywhere(child, item_obj):
+                        return copy.deepcopy(parent1)
+            else:
+                return copy.deepcopy(parent1)
+
         return child
+
 
     def select_parent(self):
         """Tournament selection with tournament size = 3."""
         tournament_size = 3
         tournament = random.sample(self.population, tournament_size)
-        # Sort by ascending cost, so that the lowest cost is index 0
+        # Sort by ascending cost
         tournament.sort(key=lambda wh: self.objective_function(wh))
         return tournament[0]
 
@@ -313,30 +419,36 @@ class GeneticAlgorithm:
 
 if __name__ == "__main__":
     warehouse = build_sample_warehouse(
-        num_zones=5,
-        num_aisles=3,
-        num_racks=2,
+        num_zones=4,
+        num_aisles=4,
+        num_racks=3,
         rack_dimensions=(5, 4, 6),
         rack_spacing=(2, 2, 0.5),
         show_vis=True
     )
 
     populate_warehouse(warehouse, 200)
+
+    before_count = count_unique_items(warehouse)
+    print(f"Items before GA: {before_count}")
+
     initial_state = copy.deepcopy(warehouse)
 
     ga_config = {
-    "population_size": 200,
-    "generations": 100,
+    "population_size": 400,
+    "generations": 300,
     "crossover_rate": 0.8,
-    "mutation_rate": 0.3,
-    "fallback_prob": 0.05,
-    "elitism_rate": 0.05,
-    "dock_zone_index": 0  # The first zone will be used as the dock zone
-}
+    "mutation_rate": 0.25,
+    "fallback_prob": 0.075,
+    "elitism_rate": 0.08,
+    }
 
     ga = GeneticAlgorithm(warehouse, ga_config)
 
     optimized_warehouse = ga.run()
+
+    after_count = count_unique_items(optimized_warehouse)
+    print(f"Items after GA: {after_count}")
 
     initial_state.show_vis = True
     optimized_warehouse.show_vis = True
