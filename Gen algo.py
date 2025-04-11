@@ -40,7 +40,7 @@ class GeneticAlgorithm:
         w_high_urgency = 150.0  # High urgency item not in bottom rack
         high_urgency_threshold = 4
         zone_categories = list(item_directory.keys())
-
+    
         # 1. Zone Category penalty
         for zone_idx, zone in enumerate(warehouse.zones):
             expected_category = zone_categories[zone_idx % 4]

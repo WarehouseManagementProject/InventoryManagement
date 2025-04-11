@@ -8,6 +8,8 @@ class SimulatedAnn:
         self.listOfItems = items
         self.unPlacedItems = len(self.listOfItems)
         self.currEntropy = self.unPlacedItems * 35
+        self.lossTrend = []
+        self.lossTrend.append(self.currEntropy)
 
     def calculateChangeInEntropy(self, item, rack, position, zone, aisle):
         category_score = 0
@@ -57,8 +59,10 @@ class SimulatedAnn:
                         isItemPlaced = True
                     else:
                         self.warehouse.undo_item()
+            
 
                 tries += 1
+            self.lossTrend.append(self.currEntropy)
 
             self.unPlacedItems -= 1
             initialTemperature *= decay
@@ -86,9 +90,9 @@ warehouse = build_sample_warehouse(
     rack_spacing=(2, 2, 0.5),
     show_vis=True
 )
-
-warehouse.start_visualization()
+# warehouse.start_visualization()
 items = generateItems(200)
 simulated_annealing = SimulatedAnn(warehouse, items)
 optimized_warehouse = simulated_annealing.train()
-warehouse.show_final_state()
+print(simulated_annealing.lossTrend)
+# warehouse.show_final_state()
