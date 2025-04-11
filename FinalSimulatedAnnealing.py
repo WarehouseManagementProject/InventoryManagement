@@ -47,7 +47,7 @@ class SimulatedAnn:
 
                 entropy_change = self.calculateChangeInEntropy(item, rack, position, zone, aisle)
                 new_entropy = self.currEntropy + entropy_change
-
+                self.lossTrend.append(new_entropy)
                 if new_entropy < self.currEntropy:
                     self.currEntropy = new_entropy
                     isItemPlaced = True
@@ -62,7 +62,7 @@ class SimulatedAnn:
             
 
                 tries += 1
-            self.lossTrend.append(self.currEntropy)
+            
 
             self.unPlacedItems -= 1
             initialTemperature *= decay
