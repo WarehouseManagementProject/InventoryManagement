@@ -90,7 +90,7 @@ class GeneticAlgorithm:
                         penalty = w_rack * (total_items - dominant)
                         total_cost += penalty
 
-        # 4. High Urgency Item(must be in bottom rack of aisle)
+        # 4. High Urgency Item(must be in bottom rack)
         for zone in warehouse.zones:
             for aisle in zone.aisles:
                 if not aisle.racks:
@@ -263,7 +263,7 @@ class GeneticAlgorithm:
         for zone in child.zones:
             for aisle in zone.aisles:
                 for rack in aisle.racks:
-                    rack.storage.fill(None)  # Remove all items from child
+                    rack.storage.fill(None)
 
         # Helper to record item positions
         def record_positions(warehouse):
@@ -282,7 +282,6 @@ class GeneticAlgorithm:
         parent1_positions = record_positions(parent1)
         parent2_positions = record_positions(parent2)
 
-        # All unique item IDs found in either parent
         all_item_ids = set(parent1_positions.keys()).union(parent2_positions.keys())
 
         def find_child_rack(child_warehouse, rack_id):
@@ -309,7 +308,7 @@ class GeneticAlgorithm:
 
             return child_rack.place_item(item_obj, (i, j, k))
 
-        # Fallback: try placing the item anywhere in the child
+        # Fallback:
         def attempt_place_anywhere(child_warehouse, item_obj):
             for z in child_warehouse.zones:
                 for a in z.aisles:
@@ -331,9 +330,7 @@ class GeneticAlgorithm:
                     first_positions = parent2_positions
                     second_positions = parent1_positions
 
-                # Attempt from the first parent's coords
                 if not attempt_place_at_parent_coords(child, item_id, first_positions):
-                    # If that fails, try the other parent's coords
                     if not attempt_place_at_parent_coords(child, item_id, second_positions):
                         item_obj = (first_positions[item_id][0].storage[first_positions[item_id][1]] 
                                     if item_id in first_positions 
@@ -402,7 +399,6 @@ class GeneticAlgorithm:
 
             self.population = new_population
 
-            # Check the best solution this generation
             for candidate in self.population:
                 cost = self.objective_function(candidate)
                 if cost < best_cost:
