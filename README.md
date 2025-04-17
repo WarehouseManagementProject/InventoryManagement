@@ -56,9 +56,6 @@ The Warehouse SLIM Optimization project aims to determine the most suitable conf
 
 - **Visualization**
   - The current idea is to use Python package such as [PyVista](https://www.pyvista.org/) to render 3D numpy matrices.
-
-<img width="786" alt="image" src="https://github.com/user-attachments/assets/fe6a5b9c-9cd8-40f9-bbf0-d40fa47ac37b" />
-
   
 - **3D Representation**
   - The 3D coordinates and dimensions of entities are used to generate cuboids.
@@ -104,3 +101,7 @@ The Warehouse SLIM Optimization project aims to determine the most suitable conf
 | **March 23 - 27**  | Test algorithms.             |
 | **March 28 - April 2** | Run full-scale simulations, analyze results, and fine-tune algorithms. |
 | **April 3 - April 5** | Prepare final report, document findings, and outline improvements.     |
+
+
+
+<img width="786" alt="image" src="https://github.com/user-attachments/assets/fe6a5b9c-9cd8-40f9-bbf0-d40fa47ac37b" />
