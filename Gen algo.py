@@ -405,7 +405,7 @@ if __name__ == "__main__":
 
     ga_config = {
     "population_size": 400,
-    "generations": 300,
+    "generations": 800,
     "crossover_rate": 0.8,
     "mutation_rate": 0.25,
     "fallback_prob": 0.075,
