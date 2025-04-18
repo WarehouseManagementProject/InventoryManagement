@@ -119,134 +119,108 @@ class GeneticAlgorithm:
 
     def mutate(self, warehouse):
         """
-        1) item-to-item swap:
-            - pick 2 racks that each have at least 1 occupied cell
-            - pick one occupied cell in rack1, one in rack2
-            - swap them (only those single cells)
-        2) item-to-empty:
-            - pick 1 rack that has at least 1 occupied cell
-            - pick 1 rack that has at least 1 empty cell
-            - move one single cell from the first rack to one empty cell in the second rack
+        Either swap two complete items or move one
+        item to an empty origin cell, keeping the change only if it passes
+        the cost / fallback test.
         """
+        orig_cost = self.objective_function(warehouse)
 
-        original_cost = self.objective_function(warehouse)
+        # helper
+        def item_origins(rack):
+            """Return [(item_obj, origin_ijk)] for each distinct item in rack."""
+            seen = {}
+            for i in range(rack.dimensions[0]):
+                for j in range(rack.dimensions[1]):
+                    for k in range(rack.dimensions[2]):
+                        itm = rack.storage[i, j, k]
+                        if itm and itm not in seen:
+                            seen[itm] = (i, j, k)
+            return list(seen.items())
 
-        # 2) Gather racks_with_items and racks_with_empty
-        racks_with_items = []
-        racks_with_empty = []
-        for zone in warehouse.zones:
-            for aisle in zone.aisles:
-                for rack in aisle.racks:
-                    # Check if there's at least one occupied cell
-                    occupied_positions = [(i, j, k)
-                                        for i in range(rack.dimensions[0])
-                                        for j in range(rack.dimensions[1])
-                                        for k in range(rack.dimensions[2])
-                                        if rack.storage[i, j, k] is not None]
-                    if occupied_positions:
-                        racks_with_items.append(rack)
+        # collect racks
+        with_items, with_empty = [], []
+        for z in warehouse.zones:
+            for a in z.aisles:
+                for r in a.racks:
+                    if np.any(r.storage != None):
+                        with_items.append(r)
+                    if any(r.storage[i, j, k] is None
+                        for i in range(r.dimensions[0])
+                        for j in range(r.dimensions[1])
+                        for k in range(r.dimensions[2])):
+                        with_empty.append(r)
 
-                    empty_positions = [(i, j, k)
-                                    for i in range(rack.dimensions[0])
-                                    for j in range(rack.dimensions[1])
-                                    for k in range(rack.dimensions[2])
-                                    if rack.storage[i, j, k] is None]
-                    if empty_positions:
-                        racks_with_empty.append(rack)
-
-        # If there aren't enough racks to do item-to-item or item-to-empty, skip mutation
-        item_to_item_possible = (len(racks_with_items) >= 2)
-        item_to_empty_possible = (len(racks_with_items) >= 1 and len(racks_with_empty) >= 1)
-        if not item_to_item_possible and not item_to_empty_possible:
+        if not with_items:
             return warehouse
 
-        # Decide which operation
-        if item_to_item_possible and item_to_empty_possible:
-            do_item_to_item = (random.random() < 0.5)
-        elif item_to_item_possible:
-            do_item_to_item = True
-        else:
-            do_item_to_item = False
+        can_swap = len(with_items) >= 2
+        can_move = bool(with_empty)
+        if not (can_swap or can_move):
+            return warehouse
 
-        # Store the changed cells so as to revert if cost doesn't improve
-        changes = [] 
+        do_swap = random.random() < 0.5 if (can_swap and can_move) else can_swap
+
+        # change log for revert
+        changes = []
 
         def revert():
-            for rack, (pos, old_val) in changes:
-                rack.storage[pos] = old_val
+            for rack, pos, _ in changes:
+                rack.remove_item(pos)
+            for rack, pos, itm in changes:
+                if itm is not None:
+                    rack.place_item(itm, pos)
 
-        # 3) Perform the chosen operation
-        if do_item_to_item:
-            # ITEM-to-ITEM SWAP
-            rack1, rack2 = random.sample(racks_with_items, 2)
+        #1. item‑to‑item swap
+        if do_swap:
+            rack1, rack2 = random.sample(with_items, 2)
+            itm1, pos1 = random.choice(item_origins(rack1))
+            itm2, pos2 = random.choice(item_origins(rack2))
 
-            # Pick a random occupied cell from each
-            occupied1 = [(i, j, k)
-                        for i in range(rack1.dimensions[0])
-                        for j in range(rack1.dimensions[1])
-                        for k in range(rack1.dimensions[2])
-                        if rack1.storage[i, j, k] is not None]
-            occupied2 = [(i, j, k)
-                        for i in range(rack2.dimensions[0])
-                        for j in range(rack2.dimensions[1])
-                        for k in range(rack2.dimensions[2])
-                        if rack2.storage[i, j, k] is not None]
+            # remove originals temporarily
+            rack1.remove_item(pos1)
+            rack2.remove_item(pos2)
 
-            if not occupied1 or not occupied2:
+            if rack1.can_place_item(itm2, pos1) and rack2.can_place_item(itm1, pos2):
+                rack1.place_item(itm2, pos1)
+                rack2.place_item(itm1, pos2)
+                # record original occupants for revert
+                changes.append((rack1, pos1, itm1))
+                changes.append((rack2, pos2, itm2))
+            else:
+                rack1.place_item(itm1, pos1)
+                rack2.place_item(itm2, pos2)
                 return warehouse
 
-            pos1 = random.choice(occupied1)
-            pos2 = random.choice(occupied2)
-
-            item1 = rack1.storage[pos1]
-            item2 = rack2.storage[pos2]
-
-            changes.append((rack1, (pos1, item1)))
-            changes.append((rack2, (pos2, item2)))
-
-            # Perform the swap
-            rack1.storage[pos1] = item2
-            rack2.storage[pos2] = item1
-
+        #2. item‑to‑empty move
         else:
-            # ITEM-to-EMPTY MOVE
-            rack_with_items = random.choice(racks_with_items)
-            rack_with_empty = random.choice(racks_with_empty)
+            rack_src  = random.choice(with_items)
+            rack_dest = random.choice(with_empty)
+            itm, src_pos = random.choice(item_origins(rack_src))
 
-            occupied_positions = [(i, j, k)
-                                for i in range(rack_with_items.dimensions[0])
-                                for j in range(rack_with_items.dimensions[1])
-                                for k in range(rack_with_items.dimensions[2])
-                                if rack_with_items.storage[i, j, k] is not None]
-            empty_positions = [(i, j, k)
-                            for i in range(rack_with_empty.dimensions[0])
-                            for j in range(rack_with_empty.dimensions[1])
-                            for k in range(rack_with_empty.dimensions[2])
-                            if rack_with_empty.storage[i, j, k] is None]
-
-            if not occupied_positions or not empty_positions:
+            # find an empty origin in dest where item fits
+            empty_cells = [(i, j, k)
+                        for i in range(rack_dest.dimensions[0])
+                        for j in range(rack_dest.dimensions[1])
+                        for k in range(rack_dest.dimensions[2])
+                        if rack_dest.storage[i, j, k] is None]
+            random.shuffle(empty_cells)
+            dest_pos = next((p for p in empty_cells if rack_dest.can_place_item(itm, p)), None)
+            if dest_pos is None:
                 return warehouse
 
-            pos1 = random.choice(occupied_positions)
-            pos2 = random.choice(empty_positions)
+            rack_src.remove_item(src_pos)
+            rack_dest.place_item(itm, dest_pos)
+            # record original state
+            changes.append((rack_src,  src_pos, itm))
+            changes.append((rack_dest, dest_pos, None))
 
-            item_to_move = rack_with_items.storage[pos1]
-
-            # Record old states for revert
-            changes.append((rack_with_items, (pos1, item_to_move)))
-            changes.append((rack_with_empty, (pos2, rack_with_empty.storage[pos2])))
-
-            rack_with_items.storage[pos1] = None
-            rack_with_empty.storage[pos2] = item_to_move
-
-        # 4) Cost-based acceptance
-        mutated_cost = self.objective_function(warehouse)
-        if mutated_cost < (original_cost - 1e-6) or random.random() < self.fallback_prob:
+        # 3. cost‑based acceptance
+        new_cost = self.objective_function(warehouse)
+        if new_cost < (orig_cost - 1e-6) or random.random() < self.fallback_prob:
             return warehouse
         else:
             revert()
             return warehouse
-
 
     def crossover(self, parent1, parent2):
         """
