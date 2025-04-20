@@ -285,7 +285,7 @@ class GeneticAlgorithm:
 
 if __name__ == "__main__":
     wh = build_sample_warehouse(
-        num_zones=5,
+        num_zones=4,
         num_aisles=3,
         num_racks=3,
         rack_dimensions=(5, 4, 6),
@@ -298,7 +298,7 @@ if __name__ == "__main__":
     # GA configuration
     ga_config = {
         "population_size": 400,
-        "generations": 600,
+        "generations": 800,
         "crossover_rate": 0.8,
         "mutation_rate": 0.3,
         "fallback_prob": 0.05,
