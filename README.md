@@ -70,7 +70,9 @@ The Warehouse SLIM Optimization project aims to determine the most suitable conf
   - The color is determined based on the entity type and the item sub-category.
 
 
-[Interacting with the Environment](https://github.com/user-attachments/assets/84f46f76-7e4e-427a-bc52-996e2487f318)
+https://github.com/user-attachments/assets/2c660ddd-98c4-4489-ad46-bdf0d5b822dc
+
+
 
 
 ## Key Objectives
